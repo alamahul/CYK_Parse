@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Algoritma CYK</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        text-align: center;
+        padding: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Algoritma CYK</h1>
+      <form id="cykForm">
+        <label for="grammar">Grammar (CNF, format: S->AB,A->a):</label><br />
+        <textarea id="grammar" rows="5" style="width: 100%"></textarea><br /><br />
+
+        <label for="inputString">Input String:</label><br />
+        <input type="text" id="inputString" style="width: 100%" /><br /><br />
+
+        <button type="button" onclick="runCYK()">Run CYK Algorithm</button>
+      </form>
+      <div id="result"></div>
+    </div>
+
+    <script>
+      function parseGrammar(grammarInput) {
+        const rules = grammarInput.split("\n").map((rule) => rule.trim());
+        const grammar = {};
+        for (let rule of rules) {
+          const [left, right] = rule.split("->");
+          if (!grammar[left]) grammar[left] = [];
+          grammar[left].push(...right.split("|"));
+        }
+        return grammar;
+      }
+
+      function runCYK() {
+        const grammarInput = document.getElementById("grammar").value;
+        const inputString = document.getElementById("inputString").value.trim();
+
+        if (!grammarInput || !inputString) {
+          alert("Masukkan grammar dan string input!");
+          return;
+        }
+
+        const grammar = parseGrammar(grammarInput);
+        const n = inputString.length;
+        const table = Array.from({ length: n }, () => Array(n).fill(null));
+
+        // Initial population of the table for single characters
+        for (let i = 0; i < n; i++) {
+          table[i][i] = [];
+          for (let [nonTerminal, productions] of Object.entries(grammar)) {
+            if (productions.includes(inputString[i])) {
+              if (!table[i][i].includes(nonTerminal)) {
+                table[i][i].push(nonTerminal);
+              }
+            }
+          }
+        }
+
+        // Populate table for substrings of increasing length
+        for (let length = 2; length <= n; length++) {
+          for (let start = 0; start <= n - length; start++) {
+            const end = start + length - 1;
+            table[start][end] = [];
+
+            for (let split = start; split < end; split++) {
+              const left = table[start][split];
+              const right = table[split + 1][end];
+
+              if (left && right) {
+                for (let [nonTerminal, productions] of Object.entries(grammar)) {
+                  for (let production of productions) {
+                    if (production.length === 2 && left.includes(production[0]) && right.includes(production[1])) {
+                      if (!table[start][end].includes(nonTerminal)) {
+                        table[start][end].push(nonTerminal);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Generate result
+        const resultDiv = document.getElementById("result");
+        resultDiv.innerHTML = "<h2>CYK Table</h2>" + generateTableHTML(table, n);
+
+        const isAccepted = table[0][n - 1]?.includes("S");
+        resultDiv.innerHTML += `<h3>Result: ${isAccepted ? "String Diterima" : "String Tidak Diterima"}</h3>`;
+      }
+
+      function generateTableHTML(table, n) {
+        let html = "<table><tr><th></th>";
+        for (let i = 1; i <= n; i++) {
+          html += `<th>${i}</th>`;
+        }
+        html += "</tr>";
+
+        for (let i = 0; i < n; i++) {
+          html += `<tr><th>${i + 1}</th>`;
+          for (let j = 0; j < n; j++) {
+            var cell = "";
+            if (table[j][i] !== null) {
+              if (table[j][i].length != 0) {
+                cell = table[j][i].join(", ");
+              } else {
+                cell = "Ø";
+              }
+            } else {
+              cell = null;
+            }
+            // const cell = table[j][i] ? table[j][i].join(", ") : "";
+            if (cell !== null) {
+              html += `<td>${cell}</td>`;
+            } else {
+            }
+          }
+          html += "</tr>";
+        }
+
+        html += "</table>";
+        console.log(table);
+        return html;
+      }
+    </script>
+  </body>
+</html>
+
+<!--
+S->AB|BC
+A->BA|a
+B->CC|b
+C->AB|a   
+-->
